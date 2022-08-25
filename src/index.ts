@@ -15,7 +15,7 @@ app.post("/", (req, res) => {
     token === process.env.SLACK_VERIFICATION_TOKEN &&
     type === "url_verification"
   ) {
-    res.status(200).send(challenge);
+    res.status(200).json({ challenge });
   } else {
     res.status(400).end();
   }

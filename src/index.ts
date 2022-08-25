@@ -10,14 +10,14 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.post("/", (req, res) => {
+app.post("/", async (req, res) => {
   const type = req.body.type;
 
   switch (type) {
     case "url_verification":
       return verify(req, res);
     case "event_callback":
-      return messagePosted(req, res);
+      return await messagePosted(req, res);
     default:
       console.error(`未対応のtype: ${type}`);
   }

@@ -1,6 +1,8 @@
 require("dotenv").config();
 import express from "express";
+
 import { verify } from "./routes/verify";
+import { messagePosted } from "./routes/messagePosted";
 
 const port = process.env.PORT || 3000;
 
@@ -14,6 +16,8 @@ app.post("/", (req, res) => {
   switch (type) {
     case "url_verification":
       return verify(req, res);
+    case "event_callback":
+      return messagePosted(req, res);
     default:
       console.error(`未対応のtype: ${type}`);
   }

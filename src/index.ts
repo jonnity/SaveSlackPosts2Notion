@@ -12,3 +12,5 @@ app.get("/", (req, res) => {
 app.post("/");
 
 app.listen(port);
+
+export default app;

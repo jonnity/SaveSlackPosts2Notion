@@ -23,7 +23,7 @@ export const messagePosted = async (req: Request, res: Response) => {
   try {
     await axios.post(
       "https://api.notion.com/v1/pages",
-      {
+      JSON.stringify({
         parent: {
           database_id: databaseIds[channelName],
         },
@@ -45,11 +45,12 @@ export const messagePosted = async (req: Request, res: Response) => {
             ],
           },
         },
-      },
+      }),
       {
         headers: {
           Authorization: `Bearer ${process.env.NOTION_TOKEN}`,
           "Notion-Version": "2022-06-28",
+          "Content-Type": "application/json",
         },
       }
     );

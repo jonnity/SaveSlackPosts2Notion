@@ -48,7 +48,7 @@ export const messagePosted = async (req: Request, res: Response) => {
       },
       {
         headers: {
-          authorization: `bearer ${process.env.NOTION_TOKEN}`,
+          authorization: `Bearer ${process.env.NOTION_TOKEN}`,
           "Notion-Version": "2022-06-28",
         },
       }

@@ -23,6 +23,8 @@ app.post("/", async (req, res) => {
   }
 });
 
-app.listen(port);
+app.listen(port, () => {
+  console.log(`start listening at ${port}`);
+});
 
 export default app;

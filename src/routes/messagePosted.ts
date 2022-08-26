@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { Client } from "@notionhq/client";
 
 import { ChannelId, channels, databaseIds, UserId, users } from "../constants";
+import { proxyAgent } from "../proxyAgent";
 
 export const messagePosted = async (req: Request, res: Response) => {
   const token = req.body.token;
@@ -22,6 +23,7 @@ export const messagePosted = async (req: Request, res: Response) => {
     const notion = new Client({
       auth: process.env.NOTION_TOKEN,
       notionVersion: "2022-06-28",
+      agent: proxyAgent,
     });
     await notion.pages.create({
       parent: {
@@ -29,7 +31,6 @@ export const messagePosted = async (req: Request, res: Response) => {
       },
       properties: {
         content: {
-          name: "content",
           title: [
             {
               text: {
@@ -38,7 +39,13 @@ export const messagePosted = async (req: Request, res: Response) => {
             },
           ],
         },
-        addedBy: userName,
+        addedBy: {
+          multi_select: [
+            {
+              name: userName,
+            },
+          ],
+        },
       },
     });
     return res.status(201).end();

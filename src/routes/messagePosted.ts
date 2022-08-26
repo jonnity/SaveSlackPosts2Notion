@@ -21,7 +21,7 @@ export const messagePosted = async (req: Request, res: Response) => {
   console.log(`user: ${userName}`);
   console.log(`text: ${postedText}`);
   try {
-    axios.post(
+    await axios.post(
       "https://api.notion.com/v1/pages",
       {
         parent: {

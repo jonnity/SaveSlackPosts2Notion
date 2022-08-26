@@ -1,7 +1,11 @@
 require("dotenv").config();
 import { Request, Response } from "express";
+import { Client } from "@notionhq/client";
 
-export const messagePosted = (req: Request, res: Response) => {
+import { ChannelId, channels, databaseIds, UserId, users } from "../constants";
+import { proxyAgent } from "../proxyAgent";
+
+export const messagePosted = async (req: Request, res: Response) => {
   const token = req.body.token;
   if (token !== process.env.SLACK_VERIFICATION_TOKEN) {
     console.error(`token: ${token}`);
@@ -9,6 +13,44 @@ export const messagePosted = (req: Request, res: Response) => {
   }
 
   const event = req.body.event;
-  console.log(JSON.stringify(event));
-  return res.status(200).end();
+  const postedText = event.text as string;
+  const postedUserId = event.user as UserId;
+  const userName = users[postedUserId];
+  const postedChannelId = event.channel as ChannelId;
+  const channelName = channels[postedChannelId];
+
+  try {
+    const notion = new Client({
+      auth: process.env.NOTION_TOKEN,
+      notionVersion: "2022-06-28",
+      agent: proxyAgent,
+    });
+    await notion.pages.create({
+      parent: {
+        database_id: databaseIds[channelName],
+      },
+      properties: {
+        content: {
+          title: [
+            {
+              text: {
+                content: postedText,
+              },
+            },
+          ],
+        },
+        addedBy: {
+          multi_select: [
+            {
+              name: userName,
+            },
+          ],
+        },
+      },
+    });
+    return res.status(201).end();
+  } catch (error: any) {
+    console.error(JSON.stringify(error));
+    return res.status(500).end();
+  }
 };

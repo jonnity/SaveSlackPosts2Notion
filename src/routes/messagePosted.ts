@@ -1,9 +1,8 @@
 require("dotenv").config();
 import { Request, Response } from "express";
-import { Client } from "@notionhq/client";
+import axios from "axios";
 
 import { ChannelId, channels, databaseIds, UserId, users } from "../constants";
-import { proxyAgent } from "../proxyAgent";
 
 export const messagePosted = async (req: Request, res: Response) => {
   const token = req.body.token;
@@ -19,35 +18,41 @@ export const messagePosted = async (req: Request, res: Response) => {
   const postedChannelId = event.channel as ChannelId;
   const channelName = channels[postedChannelId];
 
+  console.log(`user: ${userName}`);
+  console.log(`text: ${postedText}`);
   try {
-    const notion = new Client({
-      auth: process.env.NOTION_TOKEN,
-      notionVersion: "2022-06-28",
-      agent: proxyAgent,
-    });
-    await notion.pages.create({
-      parent: {
-        database_id: databaseIds[channelName],
-      },
-      properties: {
-        content: {
-          title: [
-            {
-              text: {
-                content: postedText,
+    axios.post(
+      "https://api.notion.com/v1/pages",
+      {
+        parent: {
+          database_id: databaseIds[channelName],
+        },
+        properties: {
+          content: {
+            title: [
+              {
+                text: {
+                  content: postedText,
+                },
               },
-            },
-          ],
-        },
-        addedBy: {
-          multi_select: [
-            {
-              name: userName,
-            },
-          ],
+            ],
+          },
+          addedBy: {
+            multi_select: [
+              {
+                name: userName,
+              },
+            ],
+          },
         },
       },
-    });
+      {
+        headers: {
+          authorization: `bearer ${process.env.NOTION_TOKEN}`,
+          "Notion-Version": "2022-06-28",
+        },
+      }
+    );
     return res.status(201).end();
   } catch (error: any) {
     console.error(JSON.stringify(error));

@@ -1,45 +1,73 @@
 require("dotenv").config();
 import { Request, Response } from "express";
 import axios from "axios";
+import { getPageOGPMetadata } from "metagros";
 
 import { ChannelId, channels, databaseIds, UserId, users } from "../constants";
 
 export const messagePosted = async (req: Request, res: Response) => {
-  const token = req.body.token;
-  if (token !== process.env.SLACK_VERIFICATION_TOKEN) {
-    console.error(`token: ${token}`);
-    return res.status(400).end();
-  }
-
   const event = req.body.event;
   console.log(JSON.stringify(event));
-  const postedUserId = event.user as UserId;
-  const userName = users[postedUserId];
-  if (!userName) {
-    return res.status(400).end();
+  // 単純なメッセージ送信でない場合（deleteなど）
+  if (event.subtype) {
+    return res.end();
   }
-
-  const postedChannelId = event.channel as ChannelId;
-  const channelName = channels[postedChannelId];
-
-  const attachments = event.attachments[0];
-  const title = (attachments ? attachments.title : event.text) || "no title"; // リンク等の添付があればそのタイトルをtitleに、なければtextをそのままtitleに
-  const desctiption = attachments?.text; // descriptionは空欄も可
-  const url = attachments?.original_url; // urlも空欄可
-  // commentはurlでないblockをつなげて作成
-  const comment = event?.blocks[0]?.elements
-    ?.map((element: any) => {
-      return element.type === "url" ? undefined : element.text;
-    })
-    .join("");
-  const thumbnailUrl = attachments?.image_url;
-
   try {
+    const postedUserId = event.user as UserId;
+    const userName = users[postedUserId];
+    if (!userName) {
+      return res.status(400).end();
+    }
+
+    const postedChannelId = event.channel as ChannelId;
+    const channelName = channels[postedChannelId];
+    const targetDB = databaseIds[channelName];
+
+    const blockElements = event.blocks[0]?.elements;
+    if (blockElements.type !== "rich_text_section") {
+      console.error(`未対応block type: ${blockElements.type}`);
+      return res.status(400).end();
+    }
+    const links = blockElements?.elements.filter((element: any) => {
+      return element.type === "link";
+    });
+    const texts = blockElements?.elements.filter((element: any) => {
+      return element.type === "text";
+    });
+
+    const url = links[0]?.url; // urlも空欄可
+    const metadata = url ? await getPageOGPMetadata(url) : undefined;
+
+    // リンク等の添付があればそのタイトルをtitleに、なければtextをそのままtitleに
+    let title = undefined;
+    let description = undefined;
+    let comment = undefined;
+    let thumbnailUrl = undefined;
+    if (links.length !== 0) {
+      title = metadata?.title || "no title";
+      description = metadata?.description || "no description"; // descriptionは空欄も可
+      thumbnailUrl = metadata?.image || undefined;
+
+      const postedText = texts
+        .map((textElement: any) => {
+          return textElement.text;
+        })
+        .join("");
+      const otherLinks = links.slice(1).join(", ");
+      comment = otherLinks
+        ? `${postedText}（その他リンク: ${otherLinks}）`
+        : postedText;
+    } else {
+      title = event.text;
+    }
+
+    // commentはurlでないblockをつなげて作成
+
     await axios.post(
       "https://api.notion.com/v1/pages",
       JSON.stringify({
         parent: {
-          database_id: databaseIds[channelName],
+          database_id: targetDB,
         },
         properties: {
           Title: {
@@ -51,28 +79,34 @@ export const messagePosted = async (req: Request, res: Response) => {
               },
             ],
           },
-          Description: {
-            rich_text: [
-              {
-                text: {
-                  content: desctiption,
-                },
-              },
-            ],
-          },
-          Link: {
-            type: "url",
-            url,
-          },
-          Comment: {
-            rich_text: [
-              {
-                text: {
-                  content: comment,
-                },
-              },
-            ],
-          },
+          Description: description
+            ? {
+                rich_text: [
+                  {
+                    text: {
+                      content: description,
+                    },
+                  },
+                ],
+              }
+            : undefined,
+          Link: url
+            ? {
+                type: "url",
+                url,
+              }
+            : undefined,
+          Comment: comment
+            ? {
+                rich_text: [
+                  {
+                    text: {
+                      content: comment,
+                    },
+                  },
+                ],
+              }
+            : undefined,
           Posted: {
             multi_select: [
               {

@@ -13,7 +13,7 @@ app.post("/", async (req, res) => {
   const token = req.body.token;
   if (token !== process.env.SLACK_VERIFICATION_TOKEN) {
     console.error(`token: ${token}`);
-    return res.status(400).end();
+    return res.end();
   }
 
   const type = req.body.type;
@@ -29,7 +29,7 @@ app.post("/", async (req, res) => {
       return await messagePosted(req, res);
     default:
       console.error(`未対応のtype: ${type}`);
-      return res.status(400).end();
+      return res.end();
   }
 });
 

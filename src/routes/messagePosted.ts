@@ -8,7 +8,7 @@ import { ChannelId, channels, databaseIds, UserId, users } from "../constants";
 export const messagePosted = async (req: Request, res: Response) => {
   console.log(`headers: ${JSON.stringify(req.headers)}`);
   console.log(`body: ${JSON.stringify(req.body)}`);
-  if (req.headers["X-Slack-Retry-Num"]) {
+  if (req.headers["X-Slack-Retry-Num"] || req.headers["x-slack-retry-num"]) {
     return res.end();
   }
   const event = req.body.event;
@@ -21,7 +21,7 @@ export const messagePosted = async (req: Request, res: Response) => {
     const postedUserId = event.user as UserId;
     const userName = users[postedUserId];
     if (!userName) {
-      return res.status(400).end();
+      return res.end();
     }
 
     const postedChannelId = event.channel as ChannelId;
@@ -31,11 +31,11 @@ export const messagePosted = async (req: Request, res: Response) => {
     const blockElements = event.blocks[0]?.elements;
     if (blockElements.length !== 1) {
       console.error("複数のBlockElementsが来ることは想定していない");
-      return res.status(400).end();
+      return res.end();
     }
     if (blockElements[0].type !== "rich_text_section") {
       console.error(`未対応block type: ${blockElements[0].type}`);
-      return res.status(400).end();
+      return res.end();
     }
     const richTextElements = blockElements[0].elements;
     const links = richTextElements.filter((element: any) => {
@@ -148,7 +148,7 @@ export const messagePosted = async (req: Request, res: Response) => {
         },
       }
     );
-    return res.status(201).end();
+    return res.end();
   } catch (error: any) {
     console.error(JSON.stringify(error));
     return res.status(500).end();

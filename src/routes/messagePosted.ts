@@ -6,6 +6,9 @@ import { getMetaData } from "../getMetaData";
 import { ChannelId, channels, databaseIds, UserId, users } from "../constants";
 
 export const messagePosted = async (req: Request, res: Response) => {
+  if (req.headers["X-Slack-Retry-Num"]) {
+    return res.end();
+  }
   const event = req.body.event;
   console.log(JSON.stringify(event));
   // 単純なメッセージ送信でない場合（deleteなど）
@@ -57,8 +60,9 @@ export const messagePosted = async (req: Request, res: Response) => {
         .map((textElement: any) => {
           return textElement.text;
         })
-        .join("");
-      const otherLinks = links.slice(1).join(", ");
+        .join("")
+        .trim();
+      const otherLinks = links.slice(1).join(", ").trim();
       comment = otherLinks
         ? `${postedText}（その他リンク: ${otherLinks}）`
         : postedText;

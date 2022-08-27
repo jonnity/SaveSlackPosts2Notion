@@ -20,6 +20,7 @@ app.post("/", async (req, res) => {
       return await messagePosted(req, res);
     default:
       console.error(`未対応のtype: ${type}`);
+      return res.status(400).end();
   }
 });
 

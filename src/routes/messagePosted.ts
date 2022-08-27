@@ -12,14 +12,28 @@ export const messagePosted = async (req: Request, res: Response) => {
   }
 
   const event = req.body.event;
-  const postedText = event.text as string;
+  console.log(JSON.stringify(event));
   const postedUserId = event.user as UserId;
   const userName = users[postedUserId];
+  if (!userName) {
+    return res.status(400).end();
+  }
+
   const postedChannelId = event.channel as ChannelId;
   const channelName = channels[postedChannelId];
 
-  console.log(`user: ${userName}`);
-  console.log(`text: ${postedText}`);
+  const attachments = event.attachments[0];
+  const title = (attachments ? attachments.title : event.text) || "no title"; // リンク等の添付があればそのタイトルをtitleに、なければtextをそのままtitleに
+  const desctiption = attachments?.text; // descriptionは空欄も可
+  const url = attachments?.original_url; // urlも空欄可
+  // commentはurlでないblockをつなげて作成
+  const comment = event?.blocks[0]?.elements
+    ?.map((element: any) => {
+      return element.type === "url" ? undefined : element.text;
+    })
+    .join("");
+  const thumbnailUrl = attachments?.image_url;
+
   try {
     await axios.post(
       "https://api.notion.com/v1/pages",
@@ -28,22 +42,57 @@ export const messagePosted = async (req: Request, res: Response) => {
           database_id: databaseIds[channelName],
         },
         properties: {
-          content: {
+          Title: {
             title: [
               {
                 text: {
-                  content: postedText,
+                  content: title,
                 },
               },
             ],
           },
-          addedBy: {
+          Description: {
+            rich_text: [
+              {
+                text: {
+                  content: desctiption,
+                },
+              },
+            ],
+          },
+          Link: {
+            type: "url",
+            url,
+          },
+          Comment: {
+            rich_text: [
+              {
+                text: {
+                  content: comment,
+                },
+              },
+            ],
+          },
+          Posted: {
             multi_select: [
               {
                 name: userName,
               },
             ],
           },
+          Thumb: thumbnailUrl
+            ? {
+                files: [
+                  {
+                    type: "external",
+                    name: title,
+                    external: {
+                      url: thumbnailUrl,
+                    },
+                  },
+                ],
+              }
+            : undefined,
         },
       }),
       {

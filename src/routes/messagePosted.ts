@@ -1,8 +1,8 @@
 require("dotenv").config();
 import { Request, Response } from "express";
 import axios from "axios";
-import { getPageOGPMetadata } from "metagros";
 
+import { getMetaData } from "../getMetaData";
 import { ChannelId, channels, databaseIds, UserId, users } from "../constants";
 
 export const messagePosted = async (req: Request, res: Response) => {
@@ -24,19 +24,24 @@ export const messagePosted = async (req: Request, res: Response) => {
     const targetDB = databaseIds[channelName];
 
     const blockElements = event.blocks[0]?.elements;
-    if (blockElements.type !== "rich_text_section") {
-      console.error(`未対応block type: ${blockElements.type}`);
+    if (blockElements.length !== 1) {
+      console.error("複数のBlockElementsが来ることは想定していない");
       return res.status(400).end();
     }
-    const links = blockElements?.elements.filter((element: any) => {
+    if (blockElements[0].type !== "rich_text_section") {
+      console.error(`未対応block type: ${blockElements[0].type}`);
+      return res.status(400).end();
+    }
+    const richTextElements = blockElements[0].elements;
+    const links = richTextElements.filter((element: any) => {
       return element.type === "link";
     });
-    const texts = blockElements?.elements.filter((element: any) => {
+    const texts = richTextElements.filter((element: any) => {
       return element.type === "text";
     });
 
     const url = links[0]?.url; // urlも空欄可
-    const metadata = url ? await getPageOGPMetadata(url) : undefined;
+    const metadata = url ? await getMetaData(url) : undefined;
 
     // リンク等の添付があればそのタイトルをtitleに、なければtextをそのままtitleに
     let title = undefined;

@@ -6,6 +6,8 @@ import { getMetaData } from "../getMetaData";
 import { ChannelId, channels, databaseIds, UserId, users } from "../constants";
 
 export const messagePosted = async (req: Request, res: Response) => {
+  console.log(`headers: ${JSON.stringify(req.headers)}`);
+  console.log(`body: ${JSON.stringify(req.body)}`);
   if (req.headers["X-Slack-Retry-Num"]) {
     return res.end();
   }
